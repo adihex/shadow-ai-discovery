@@ -10,10 +10,10 @@ def test_scanner_gcp_creds_set_via_env():
         scanner = GCPScanner(project_id="test-project", db_session=MagicMock())
         with patch("app.services.scanner.GCP_SDK_AVAILABLE", True):
             # We don't want to run the actual scan, just mock the scan sub-methods
-            with patch.object(scanner, "_scan_cloud_run", return_value=[]) as mock_run, \
-                 patch.object(scanner, "_scan_cloud_functions", return_value=[]) as mock_fn, \
-                 patch.object(scanner, "_scan_gke", return_value=[]) as mock_gke, \
-                 patch.object(scanner, "_scan_vertex_ai", return_value=[]) as mock_vertex:
+            with patch.object(scanner, "_scan_cloud_run", return_value=([], set())) as mock_run, \
+                 patch.object(scanner, "_scan_cloud_functions", return_value=([], set())) as mock_fn, \
+                 patch.object(scanner, "_scan_gke", return_value=([], set())) as mock_gke, \
+                 patch.object(scanner, "_scan_vertex_ai", return_value=([], set())) as mock_vertex:
                 
                 res = scanner.run_scan()
                 assert mock_run.called
@@ -31,10 +31,10 @@ def test_scanner_gcp_creds_set_via_adc_probing():
     with patch("app.services.scanner.GCP_SDK_AVAILABLE", True), \
          patch("google.auth.default", return_value=(MagicMock(), "test-project")) as mock_default, \
          patch.dict(os.environ, {"GOOGLE_APPLICATION_CREDENTIALS": ""}), \
-         patch.object(scanner, "_scan_cloud_run", return_value=[]), \
-         patch.object(scanner, "_scan_cloud_functions", return_value=[]), \
-         patch.object(scanner, "_scan_gke", return_value=[]), \
-         patch.object(scanner, "_scan_vertex_ai", return_value=[]):
+         patch.object(scanner, "_scan_cloud_run", return_value=([], set())), \
+         patch.object(scanner, "_scan_cloud_functions", return_value=([], set())), \
+         patch.object(scanner, "_scan_gke", return_value=([], set())), \
+         patch.object(scanner, "_scan_vertex_ai", return_value=([], set())):
         
         # We patch dict to remove PYTEST_CURRENT_TEST and GOOGLE_APPLICATION_CREDENTIALS
         env_mock = {"GCP_PROJECT_ID": "test-project"}
@@ -52,7 +52,7 @@ def test_scan_cloud_run_regions():
     with patch("google.cloud.run_v2.ServicesClient", return_value=mock_client), \
          patch.dict(os.environ, {"SHADOW_AI_GCP_REGIONS": "us-central1,europe-west1"}):
         
-        assets = scanner._scan_cloud_run()
+        assets, seen_ids = scanner._scan_cloud_run(None)
         
         assert mock_client.list_services.call_count == 2
         
@@ -74,7 +74,7 @@ def test_scan_vertex_ai_regions():
     with patch("app.services.scanner.aiplatform.Endpoint", mock_endpoint), \
          patch.dict(os.environ, {"SHADOW_AI_GCP_REGIONS": "us-central1,europe-west1"}):
         
-        assets = scanner._scan_vertex_ai()
+        assets, seen_ids = scanner._scan_vertex_ai(None)
         
         assert mock_endpoint.list.call_count == 2
         mock_endpoint.list.assert_any_call(project="test-project", location="us-central1")

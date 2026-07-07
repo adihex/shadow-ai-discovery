@@ -56,7 +56,8 @@ def analyze_asset(
     labels: Dict[str, str],
     runtime: Optional[str],
     service_account: Optional[str],
-    is_public: Optional[bool] = None
+    is_public: Optional[bool] = None,
+    has_vertex_logs: bool = False
 ) -> Tuple[bool, int, List[str], int, List[str]]:
     """
     Score one workload. `is_public` is an IAM-verified ingress hint from the
@@ -110,6 +111,11 @@ def analyze_asset(
     for keyword in RUNTIME_KEYWORDS:
         if keyword in runtime_lower:
             add_indicator(keyword, f"AI keyword '{keyword}' found in runtime")
+
+    # 5. Cloud Logging - API calls to Vertex AI
+    if has_vertex_logs:
+        confidence_score += 40
+        confidence_reasons.append("Verified Vertex AI API calls in Cloud Logging")
 
     # Cap confidence score at 100
     confidence_score = min(confidence_score, 100)
