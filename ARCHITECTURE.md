@@ -16,7 +16,7 @@ This document details the engineering decisions, trade-offs, and scaling pattern
 
 ### 3. Frontend: Vite + React + Vanilla CSS
 * **Why Vite**: High-performance dev server and instant hot-reloading.
-* **Why Vanilla CSS**: To build a premium design system tailored around specific HSL colors, grid structures, glassmorphic glows, and transition animations without relying on boilerplate utility classes.
+* **Why Vanilla CSS**: To build a premium design system tailored around specific HSL colors, grid structures without relying on boilerplate utility classes.
 * **Why SVG Charts**: Custom inline SVG charts provide a high-performance visual dashboard with zero third-party package dependencies.
 
 ### 4. Double Scanning Mode (Real GCP vs. Mock Demo)
