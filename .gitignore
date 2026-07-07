@@ -12,3 +12,32 @@ wheels/
 
 # OS cruft
 .DS_Store
+
+# Env files
+.env
+backend/.env
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/*.tfvars
+infra/*.tfplan
+*-key.json
+
+# Agent & IDE scratch directories
+.agents/
+.claude/
+.codex/
+.gemini/
+.impeccable/
+.omc/
+.opencode/
+.pi/
+.understand-anything/
+backend/.omc/
+
+# Agent tool files
+.github/hooks/
+.github/skills/
+
