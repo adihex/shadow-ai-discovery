@@ -1,6 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict
 from sqlmodel import SQLModel, Field, JSON
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
 
 class Asset(SQLModel, table=True):
     id: str = Field(primary_key=True)
@@ -16,11 +21,11 @@ class Asset(SQLModel, table=True):
     confidence_reasons: List[str] = Field(default_factory=list, sa_type=JSON)
     risk_score: int = 0
     risk_reasons: List[str] = Field(default_factory=list, sa_type=JSON)
-    last_seen: datetime = Field(default_factory=datetime.utcnow)
+    last_seen: datetime = Field(default_factory=utc_now)
 
 class Scan(SQLModel, table=True):
     id: str = Field(primary_key=True)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=utc_now)
     status: str  # "running", "completed", "failed"
     assets_found: int = 0
     agents_found: int = 0
