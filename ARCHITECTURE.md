@@ -27,7 +27,9 @@ This document details the engineering decisions, trade-offs, and scaling pattern
 
 ## ⚖️ Trade-offs Made
 * **In-Memory / Async Background Tasks**: We used FastAPI's built-in `BackgroundTasks` instead of Celery/Redis. This keeps the stack lightweight and simple but lacks progress state persistence across backend restarts.
-* **Kubernetes Workload Scanning**: Listing GKE clusters is implemented via the SDK, but scanning actual container manifests requires in-cluster GKE workload discovery or direct Kubernetes API integration (using Workload Identity). This was omitted for simplicity in favor of a robust mock payload.
+* **Kubernetes Workload Scanning**: GKE clusters are listed via the Container API, and each cluster's Deployments are inventoried directly through its Kubernetes API server (endpoint + CA from the Container API, bearer token from Application Default Credentials). Container images, env vars, and Workload Identity annotations (`iam.gke.io/gcp-service-account`) feed the heuristics. If a cluster's API server is unreachable (private endpoint, missing RBAC), the scanner degrades to recording the cluster itself as an inventory entry instead of failing the scan. Pods behind private control planes would need Connect Gateway or an in-cluster collector in production.
+* **Secret Hygiene**: The heuristics engine analyzes raw env var values (so value-based indicators fire), but values whose keys look credential-like (`KEY`, `SECRET`, `TOKEN`, `PASSWORD`, ...) are masked before anything touches the database or the API. Kubernetes `valueFrom` secret references are recorded as references only.
+* **IAM-Verified Public Ingress**: Cloud Run public exposure is determined by reading each service's IAM policy and looking for `allUsers`/`allAuthenticatedUsers` invoker bindings — labels cannot carry IAM state. The label-based check remains only as a fallback for demo mode, where no IAM policies exist.
 
 ---
 
