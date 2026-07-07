@@ -41,3 +41,9 @@ backend/.omc/
 .github/hooks/
 .github/skills/
 
+# Demo runtime files
+.demo-pids/
+.demo-backend.log
+.demo-frontend.log
+.scratch-session-export/
+VIDEO_TRANSCRIPT.md
