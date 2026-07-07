@@ -24,16 +24,16 @@ export interface Scan {
   error_message?: string;
 }
 
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/api";
 
 export async function fetchAssets(): Promise<Asset[]> {
-  const res = await fetch(`${API_BASE}/assets`);
+  const res = await fetch(`${API_BASE}/assets?limit=10000`);
   if (!res.ok) throw new Error("Failed to fetch assets");
   return res.json();
 }
 
 export async function fetchAgents(): Promise<Asset[]> {
-  const res = await fetch(`${API_BASE}/agents`);
+  const res = await fetch(`${API_BASE}/agents?limit=10000`);
   if (!res.ok) throw new Error("Failed to fetch agents");
   return res.json();
 }

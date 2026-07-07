@@ -25,7 +25,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [['list']],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5175',
     trace: 'retain-on-failure',
   },
   projects: [
@@ -33,7 +33,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'uv run uvicorn app.main:app --port 8000',
+      command: './.venv/bin/python -m uvicorn app.main:app --port 8000',
       cwd: path.join(import.meta.dirname, '..', 'backend'),
       url: 'http://localhost:8000/',
       reuseExistingServer: false,
@@ -41,9 +41,9 @@ export default defineConfig({
       timeout: 30_000,
     },
     {
-      command: 'npm run dev -- --strictPort --port 5173',
-      url: 'http://localhost:5173/',
-      reuseExistingServer: false,
+      command: 'npm run dev -- --strictPort --port 5175',
+      url: 'http://localhost:5175/',
+      reuseExistingServer: true,
       timeout: 30_000,
     },
   ],
