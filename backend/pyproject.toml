@@ -1,0 +1,19 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.110.0",
+    "google-cloud-aiplatform>=1.44.0",
+    "google-cloud-container>=2.40.0",
+    "google-cloud-functions>=1.13.0",
+    "google-cloud-logging>=3.9.0",
+    "google-cloud-run>=0.10.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "pytest>=8.0.0",
+    "sqlmodel>=0.0.16",
+    "uvicorn>=0.28.0",
+]
