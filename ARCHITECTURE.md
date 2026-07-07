@@ -20,7 +20,7 @@ This document details the engineering decisions, trade-offs, and scaling pattern
 * **Why SVG Charts**: Custom inline SVG charts provide a high-performance visual dashboard with zero third-party package dependencies.
 
 ### 4. Double Scanning Mode (Real GCP vs. Mock Demo)
-* The scanner dynamically checks if Google Application Default Credentials or Service Account variables are configured.
+* The scanner dynamically checks if Google Application Default Credentials (ADC) are configured (by verifying the `GOOGLE_APPLICATION_CREDENTIALS` environment variable or probing credentials automatically via `google.auth.default()`).
 * If credentials exist, it queries the live GCP API; if not, it automatically runs in **Mock Demo Mode** with realistic simulated environments, making the application immediately runnable and reviewable in any environment.
 
 ---

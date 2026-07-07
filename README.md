@@ -9,7 +9,7 @@ A lightweight governance platform designed to scan, inventory, and assess AI-ena
 * **Heuristics Scoring Engine**: Evaluates environment variables, container images, resource naming patterns, and IAM permissions to assign a **Confidence Score (0-100%)** of whether a workload is an autonomous AI agent.
 * **Risk Profiling (Bonus 3)**: Computes a compound **Risk Score (0-100%)** assessing security vulnerability (public ingress verified via IAM `allUsers` bindings, default/admin identity permissions, external API communication).
 * **Architecture Flow Diagram (Bonus 2)**: Renders a reactive relationship visualization showing the workload's flow (`Resource -> IAM Service Account -> AI Service`).
-* **Secret-Safe Inventory**: Env var values with credential-looking keys (`*_KEY`, `*_SECRET`, `*_TOKEN`, ...) are masked before persistence — the inventory records that a key exists, never its value.
+* **Secret-Safe Inventory**: Env var values with credential-looking keys (`*_KEY`, `*_SECRET`, `*_TOKEN`, ...) are masked before persistence — values are masked to a short vendor-prefix hint (e.g. keeping only the first 4 characters for context).
 * **Zero-Setup Demo Mode**: Automatically detects if live GCP credentials are not set and falls back to a highly realistic mock discovery catalog, making the dashboard fully functional out-of-the-box.
 
 ---
@@ -62,7 +62,7 @@ shadow-ai-discovery/
 ## 🚀 Setup & Installation
 
 ### Prerequisite
-* Python 3.10+
+* Python 3.13+ (or let `uv` manage the installation automatically)
 * Node.js 18+
 
 ### Step 1: Clone the Repository & Start the Backend

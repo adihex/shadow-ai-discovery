@@ -61,11 +61,16 @@ class GCPScanner:
         """
         Runs a scan on GCP resources. Falls back to mock scan if GCP credentials are not available.
         """
-        # Check for service account json or application default credentials
-        gcp_creds_set = (
-            os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") is not None or
-            os.environ.get("GCP_SA_KEY") is not None
-        )
+        # Check for service account json, application default credentials env, or probe google.auth.default()
+        gcp_creds_set = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") is not None
+        if not gcp_creds_set and GCP_SDK_AVAILABLE and "PYTEST_CURRENT_TEST" not in os.environ:
+            if self.project_id != "shadow-ai-discovery-demo":
+                try:
+                    import google.auth
+                    google.auth.default()
+                    gcp_creds_set = True
+                except Exception:
+                    pass
 
         assets_found = 0
         agents_found = 0
@@ -145,47 +150,61 @@ class GCPScanner:
         assets = []
         try:
             client = run_v2.ServicesClient()
-            parent = f"projects/{self.project_id}/locations/-"
-            request = run_v2.ListServicesRequest(parent=parent)
-            response = client.list_services(request=request)
+            regions_env = os.environ.get("SHADOW_AI_GCP_REGIONS")
+            if regions_env:
+                regions = [r.strip() for r in regions_env.split(",") if r.strip()]
+            else:
+                regions = [
+                    "us-central1", "us-east1", "us-east4", "us-west1",
+                    "europe-west1", "europe-west2", "europe-west3",
+                    "asia-east1", "asia-northeast1", "asia-south1"
+                ]
 
-            for service in response:
-                # Gather environment variables from first container
-                env_vars = {}
-                containers = service.template.containers
-                if containers:
-                    for env in containers[0].env:
-                        env_vars[env.name] = env.value
-
-                labels = dict(service.labels or {})
-                asset_id = f"run-{service.name.split('/')[-1]}"
-
-                # Check the service's IAM policy for an allUsers invoker
-                # binding — labels cannot carry IAM state, so this is the
-                # only reliable public-ingress signal.
+            for region in regions:
                 try:
-                    policy = client.get_iam_policy(request={"resource": service.name})
-                    self._public_hints[asset_id] = any(
-                        binding.role == "roles/run.invoker"
-                        and any(m in ("allUsers", "allAuthenticatedUsers") for m in binding.members)
-                        for binding in policy.bindings
-                    )
-                except Exception as e:
-                    print(f"Could not read IAM policy for {service.name}: {e}")
+                    parent = f"projects/{self.project_id}/locations/{region}"
+                    request = run_v2.ListServicesRequest(parent=parent)
+                    response = client.list_services(request=request)
 
-                # Convert run_v2 Service to Asset
-                assets.append(Asset(
-                    id=asset_id,
-                    name=service.name.split('/')[-1],
-                    resource_type="Cloud Run",
-                    region=service.name.split('/')[3],
-                    runtime="container",
-                    service_account=service.template.service_account,
-                    env_vars=env_vars,
-                    labels=labels
-                ))
+                    for service in response:
+                        # Gather environment variables from first container
+                        env_vars = {}
+                        containers = service.template.containers
+                        if containers:
+                            for env in containers[0].env:
+                                env_vars[env.name] = env.value
+
+                        labels = dict(service.labels or {})
+                        asset_id = f"run-{service.name.split('/')[-1]}"
+
+                        # Check the service's IAM policy for an allUsers invoker
+                        # binding — labels cannot carry IAM state, so this is the
+                        # only reliable public-ingress signal.
+                        try:
+                            policy = client.get_iam_policy(request={"resource": service.name})
+                            self._public_hints[asset_id] = any(
+                                binding.role == "roles/run.invoker"
+                                and any(m in ("allUsers", "allAuthenticatedUsers") for m in binding.members)
+                                for binding in policy.bindings
+                            )
+                        except Exception as e:
+                            print(f"Could not read IAM policy for {service.name}: {e}")
+
+                        # Convert run_v2 Service to Asset
+                        assets.append(Asset(
+                            id=asset_id,
+                            name=service.name.split('/')[-1],
+                            resource_type="Cloud Run",
+                            region=service.name.split('/')[3],
+                            runtime="container",
+                            service_account=service.template.service_account,
+                            env_vars=env_vars,
+                            labels=labels
+                        ))
+                except Exception as region_e:
+                    print(f"Error fetching Cloud Run services in region {region}: {region_e}")
         except Exception as e:
-            print(f"Error fetching Cloud Run services: {e}")
+            print(f"Error initializing Cloud Run client: {e}")
         return assets
 
     def _scan_cloud_functions(self) -> List[Asset]:
@@ -334,24 +353,37 @@ class GCPScanner:
         return assets
 
     def _scan_vertex_ai(self) -> List[Asset]:
-        """Scan Vertex AI endpoints."""
+        """Scan Vertex AI endpoints across multiple regions."""
         assets = []
         try:
-            aiplatform.init(project=self.project_id)
-            endpoints = aiplatform.Endpoint.list()
-            for ep in endpoints:
-                assets.append(Asset(
-                    id=f"vertex-{ep.name}",
-                    name=ep.display_name,
-                    resource_type="Vertex AI",
-                    region=ep.resource_name.split('/')[3],
-                    runtime="Vertex Endpoint",
-                    service_account="Managed Service Identity",
-                    env_vars={},
-                    labels=dict(ep.labels or {})
-                ))
+            regions_env = os.environ.get("SHADOW_AI_GCP_REGIONS")
+            if regions_env:
+                regions = [r.strip() for r in regions_env.split(",") if r.strip()]
+            else:
+                regions = [
+                    "us-central1", "us-east1", "us-east4", "us-west1",
+                    "europe-west1", "europe-west2", "europe-west3",
+                    "asia-east1", "asia-northeast1", "asia-south1"
+                ]
+
+            for region in regions:
+                try:
+                    endpoints = aiplatform.Endpoint.list(project=self.project_id, location=region)
+                    for ep in endpoints:
+                        assets.append(Asset(
+                            id=f"vertex-{ep.name}",
+                            name=ep.display_name,
+                            resource_type="Vertex AI",
+                            region=ep.resource_name.split('/')[3],
+                            runtime="Vertex Endpoint",
+                            service_account="Managed Service Identity",
+                            env_vars={},
+                            labels=dict(ep.labels or {})
+                        ))
+                except Exception as region_e:
+                    print(f"Error fetching Vertex AI endpoints in region {region}: {region_e}")
         except Exception as e:
-            print(f"Error fetching Vertex AI endpoints: {e}")
+            print(f"Error scanning Vertex AI: {e}")
         return assets
 
     def _generate_mock_assets(self) -> List[Asset]:
