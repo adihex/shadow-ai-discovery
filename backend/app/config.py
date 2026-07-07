@@ -1,5 +1,5 @@
 import os
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     DATABASE_PATH: str = os.path.join(
@@ -10,7 +10,6 @@ class Settings(BaseSettings):
     # Port to run frontend / backend
     PORT: int = 8000
     
-    class Config:
-        env_prefix = "SHADOW_AI_"
+    model_config = SettingsConfigDict(env_prefix="SHADOW_AI_")
 
 settings = Settings()

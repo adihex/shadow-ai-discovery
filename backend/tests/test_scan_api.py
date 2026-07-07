@@ -11,7 +11,7 @@ def test_scan_lifecycle_completes():
     """
     with TestClient(app) as client:
         resp = client.post("/api/scan")
-        assert resp.status_code == 200
+        assert resp.status_code == 202
         scan_id = resp.json()["id"]
 
         # TestClient executes background tasks before the request returns,
@@ -26,6 +26,11 @@ def test_scan_lifecycle_completes():
 def test_agents_endpoints():
     with TestClient(app) as client:
         client.post("/api/scan")
+        
+        # Test pagination
+        agents = client.get("/api/agents?skip=0&limit=1").json()
+        assert len(agents) == 1
+        
         agents = client.get("/api/agents").json()
         assert len(agents) > 0
         assert all(a["is_ai_agent"] for a in agents)
@@ -37,6 +42,24 @@ def test_agents_endpoints():
 
         assert client.get("/api/agents/does-not-exist").status_code == 404
 
+
+def test_assets_endpoints():
+    with TestClient(app) as client:
+        client.post("/api/scan")
+        
+        # Test pagination
+        assets = client.get("/api/assets?skip=0&limit=2").json()
+        assert len(assets) == 2
+        
+        assets = client.get("/api/assets").json()
+        assert len(assets) > 0
+        
+        # Test individual asset fetch
+        detail = client.get(f"/api/assets/{assets[0]['id']}")
+        assert detail.status_code == 200
+        assert detail.json()["id"] == assets[0]["id"]
+        
+        assert client.get("/api/assets/does-not-exist").status_code == 404
 
 def test_assets_are_persisted_with_redacted_env_vars():
     with TestClient(app) as client:

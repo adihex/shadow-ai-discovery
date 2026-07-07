@@ -1,5 +1,5 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
 from sqlmodel import Session, select
 from typing import List, Dict, Any
 from app.database import get_db, engine
@@ -32,7 +32,7 @@ def execute_scan_task(scan_id: str, project_id: str):
             db.add(scan)
             db.commit()
 
-@router.post("", response_model=Scan)
+@router.post("", response_model=Scan, status_code=status.HTTP_202_ACCEPTED)
 def trigger_scan(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Trigger a new discovery scan (asynchronous)."""
     scan_id = f"scan-{uuid.uuid4().hex[:8]}"
