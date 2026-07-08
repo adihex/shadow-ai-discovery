@@ -9,7 +9,7 @@ router = APIRouter(prefix="/agents", tags=["Agents"])
 @router.get("", response_model=List[Asset])
 def get_agents(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Retrieve workloads identified as likely AI agents."""
-    statement = select(Asset).where(Asset.is_ai_agent == True).offset(skip).limit(limit)
+    statement = select(Asset).where(Asset.is_ai_agent).offset(skip).limit(limit)
     results = db.exec(statement).all()
     return results
 

@@ -1,10 +1,11 @@
+from typing import Any, Dict, List, Tuple
 from app.services.heuristics import analyze_asset
 from app.services.scanner import redact_env_vars
 
 
-def analyze(**overrides):
+def analyze(**overrides: Any) -> Tuple[bool, int, List[str], int, List[str]]:
     """Call analyze_asset with a boring baseline workload."""
-    params = {
+    params: Dict[str, Any] = {
         "name": "billing-api",
         "resource_type": "Cloud Run",
         "env_vars": {},

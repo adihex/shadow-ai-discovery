@@ -7,8 +7,11 @@ A lightweight governance platform designed to scan, inventory, and assess AI-ena
 ## ✨ Features
 * **Multi-Resource Scanning**: Detects workloads across Cloud Run, Cloud Functions, GKE, and Vertex AI. GKE scanning lists clusters via the Container API, then inventories each cluster's Deployments (container images, env vars, Workload Identity bindings) through the Kubernetes API.
 * **Heuristics Scoring Engine**: Evaluates environment variables, container images, resource naming patterns, and IAM permissions to assign a **Confidence Score (0-100%)** of whether a workload is an autonomous AI agent.
-* **Risk Profiling (Bonus 3)**: Computes a compound **Risk Score (0-100%)** assessing security vulnerability (public ingress verified via IAM `allUsers` bindings, default/admin identity permissions, external API communication).
+* **Cloud Logging Integration (Bonus 1)**: Queries Cloud Logging for `protoPayload.serviceName="aiplatform.googleapis.com"` entries to confirm a workload's service account actually called the Vertex AI API — verified runtime behavior, not just static metadata, adds a further +40 to the confidence score.
 * **Architecture Flow Diagram (Bonus 2)**: Renders a reactive relationship visualization showing the workload's flow (`Resource -> IAM Service Account -> AI Service`).
+* **Risk Profiling (Bonus 3)**: Computes a compound **Risk Score (0-100%)** assessing security vulnerability (public ingress verified via IAM `allUsers` bindings, default/admin identity permissions, external API communication).
+* **Container SBOM Analysis (Bonus 4)**: Queries the Container Analysis (Grafeas) API for `PACKAGE` occurrences inside each container image, surfacing installed libraries like `langchain` or `crewai` even when the image name itself is opaque; falls back gracefully if the API isn't enabled.
+* **Incremental Scanning (Bonus 5)**: Compares each Cloud Run/Cloud Functions/Vertex AI resource's `update_time` against the last successful scan and skips IAM policy reads, SBOM lookups, and heuristics scoring for resources that haven't changed.
 * **Secret-Safe Inventory**: Env var values with credential-looking keys (`*_KEY`, `*_SECRET`, `*_TOKEN`, ...) are masked before persistence — values are masked to a short vendor-prefix hint (e.g. keeping only the first 4 characters for context).
 * **Zero-Setup Demo Mode**: Automatically detects if live GCP credentials are not set and falls back to a highly realistic mock discovery catalog, making the dashboard fully functional out-of-the-box.
 
@@ -108,10 +111,11 @@ The suite covers the heuristics engine (confidence + risk scoring, env var redac
 
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| **GET** | `/api/assets` | Retrieve all scanned GCP workloads |
-| **GET** | `/api/agents` | Retrieve only workloads classified as AI Agents |
+| **GET** | `/api/assets` | Retrieve all scanned GCP workloads (paginated via `skip`/`limit` query params) |
+| **GET** | `/api/assets/{id}` | Retrieve details of a specific asset |
+| **GET** | `/api/agents` | Retrieve only workloads classified as AI Agents (paginated via `skip`/`limit`) |
 | **GET** | `/api/agents/{id}` | Retrieve details of a specific AI Agent workload |
-| **POST** | `/api/scan` | Trigger a new asynchronous project discovery scan |
+| **POST** | `/api/scan` | Trigger a new discovery scan; returns `202 Accepted` immediately and runs as a background task |
 | **GET** | `/api/scan/history` | Retrieve history and stats of all scans |
 
 ### Example Responses

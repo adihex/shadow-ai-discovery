@@ -6,7 +6,7 @@ import tempfile
 from typing import List, Dict, Any, Optional, Tuple
 from app.models import Asset, utc_now
 from app.services.heuristics import analyze_asset
-from sqlmodel import Session, select
+from sqlmodel import Session, select, col
 from datetime import datetime
 
 # Import GCP SDK modules
@@ -15,7 +15,7 @@ try:
     from google.cloud import functions_v2
     from google.cloud import container_v1
     from google.cloud import aiplatform
-    from google.cloud import containeranalysis_v1
+    from google.cloud import containeranalysis_v1  # type: ignore
     GCP_SDK_AVAILABLE = True
 except ImportError:
     GCP_SDK_AVAILABLE = False
@@ -67,7 +67,7 @@ class GCPScanner:
         from app.models import Scan
         
         # Get last successful scan time
-        statement = select(Scan).where(Scan.status == "completed").order_by(Scan.timestamp.desc())
+        statement = select(Scan).where(Scan.status == "completed").order_by(col(Scan.timestamp).desc())
         last_scan = self.db.exec(statement).first()
         last_successful_scan = last_scan.timestamp if last_scan else None
         # Check for service account json, application default credentials env, or probe google.auth.default()
@@ -110,7 +110,7 @@ class GCPScanner:
                 scanned_assets.extend(vertex_assets)
                 seen_ids.update(vertex_seen)
 
-            except Exception as e:
+            except Exception:
                 logging.exception("Error scanning real GCP. Falling back to mock data.")
                 scanned_assets = self._generate_mock_assets()
                 is_mock = True
@@ -268,7 +268,7 @@ class GCPScanner:
                                 and any(m in ("allUsers", "allAuthenticatedUsers") for m in binding.members)
                                 for binding in policy.bindings
                             )
-                        except Exception as e:
+                        except Exception:
                             logging.exception(f"Could not read IAM policy for {service.name}")
 
                         runtime_val = "container"
@@ -292,9 +292,9 @@ class GCPScanner:
                             env_vars=env_vars,
                             labels=labels
                         ))
-                except Exception as region_e:
+                except Exception:
                     logging.exception(f"Error fetching Cloud Run services in region {region}")
-        except Exception as e:
+        except Exception:
             logging.exception("Error initializing Cloud Run client")
         return assets, seen_ids
 
@@ -327,7 +327,7 @@ class GCPScanner:
                     env_vars=env_vars,
                     labels=labels
                 ))
-        except Exception as e:
+        except Exception:
             logging.exception("Error fetching Cloud Functions")
         return assets, seen_ids
 
@@ -342,9 +342,9 @@ class GCPScanner:
             client = container_v1.ClusterManagerClient()
             parent = f"projects/{self.project_id}/locations/-"
             response = client.list_clusters(parent=parent)
-        except Exception as e:
+        except Exception:
             logging.exception("Error listing GKE clusters")
-            return assets
+            return assets, seen_ids
 
         for cluster in response.clusters:
             cluster_id = f"gke-{cluster.name}"
@@ -398,7 +398,7 @@ class GCPScanner:
             apps_api = k8s_client.AppsV1Api(api_client)
             core_api = k8s_client.CoreV1Api(api_client)
             deployments = apps_api.list_deployment_for_all_namespaces(timeout_seconds=30)
-        except Exception as e:
+        except Exception:
             logging.exception(f"Error connecting to GKE cluster {cluster.name}")
             if ca_path:
                 os.unlink(ca_path)
@@ -417,12 +417,10 @@ class GCPScanner:
                 asset_id = f"gke-{cluster.name}-{namespace}-{deploy.metadata.name}"
                 seen_ids.add(asset_id)
                 
-                # GKE Deployments only track creation_timestamp natively without deeper resource tracking
-                # We will just do a simple fallback incremental check here
-                # We skip if creation_timestamp > last_successful_scan. (Wait, if creation_timestamp > scan, it's NEW).
-                # Actually, skipping updates to deployments requires checking generation/resourceVersion which is tricky.
-                # Since the instructions don't mandate flawless K8s incremental, we just re-scan them or use a basic check.
-
+                # GKE incremental scanning is best-effort: Deployments expose
+                # creation_timestamp but no stable "last updated" field short of
+                # diffing generation/resourceVersion, so unlike the other resource
+                # types we always re-scan every Deployment in full here.
                 pod_spec = deploy.spec.template.spec
                 env_vars: Dict[str, str] = {}
                 images: List[str] = []
@@ -510,15 +508,15 @@ class GCPScanner:
                             env_vars={},
                             labels=dict(ep.labels or {})
                         ))
-                except Exception as region_e:
+                except Exception:
                     logging.exception(f"Error fetching Vertex AI endpoints in region {region}")
-        except Exception as e:
+        except Exception:
             logging.exception("Error scanning Vertex AI")
         return assets, seen_ids
 
     def _generate_mock_assets(self) -> List[Asset]:
         # Realistic simulated data
-        mock_data = [
+        mock_data: List[Dict[str, Any]] = [
             {
                 "id": "run-my-ai-service",
                 "name": "my-ai-service",

@@ -1,6 +1,5 @@
 import os
 from unittest.mock import MagicMock, patch
-import pytest
 from app.services.scanner import GCPScanner
 
 
@@ -15,7 +14,7 @@ def test_scanner_gcp_creds_set_via_env():
                  patch.object(scanner, "_scan_gke", return_value=([], set())) as mock_gke, \
                  patch.object(scanner, "_scan_vertex_ai", return_value=([], set())) as mock_vertex:
                 
-                res = scanner.run_scan()
+                scanner.run_scan()
                 assert mock_run.called
                 assert mock_fn.called
                 assert mock_gke.called
@@ -39,7 +38,7 @@ def test_scanner_gcp_creds_set_via_adc_probing():
         # We patch dict to remove PYTEST_CURRENT_TEST and GOOGLE_APPLICATION_CREDENTIALS
         env_mock = {"GCP_PROJECT_ID": "test-project"}
         with patch("os.environ", env_mock):
-            res = scanner.run_scan()
+            scanner.run_scan()
             assert mock_default.called
 
 

@@ -1,7 +1,7 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, status
-from sqlmodel import Session, select
-from typing import List, Dict, Any
+from fastapi import APIRouter, Depends, BackgroundTasks, status
+from sqlmodel import Session, select, col
+from typing import List
 from app.database import get_db, engine
 from app.models import Scan, utc_now
 from app.services.scanner import GCPScanner
@@ -54,6 +54,6 @@ def trigger_scan(background_tasks: BackgroundTasks, db: Session = Depends(get_db
 @router.get("/history", response_model=List[Scan])
 def get_scan_history(db: Session = Depends(get_db)):
     """Retrieve history of all scans."""
-    statement = select(Scan).order_by(Scan.timestamp.desc())
+    statement = select(Scan).order_by(col(Scan.timestamp).desc())
     results = db.exec(statement).all()
     return results

@@ -6,11 +6,13 @@ from app.routes import assets, agents, scans
 from app.models import Asset, Scan
 from app.services.scanner import GCPScanner
 from app.config import settings
-from sqlmodel import Session, select
+from sqlmodel import select
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
-    
+
     # Pre-populate database with an initial scan if empty
     db_gen = get_db()
     db = next(db_gen)
@@ -21,7 +23,7 @@ async def lifespan(app: FastAPI):
             print("Database is empty. Pre-populating with initial mock workloads...")
             scanner = GCPScanner(project_id=settings.GCP_PROJECT_ID, db_session=db)
             scanner.run_scan()
-            
+
         # Clean up stuck running scans from previous crashes
         stale_scans = db.exec(select(Scan).where(Scan.status == "running")).all()
         for scan in stale_scans:
@@ -33,14 +35,15 @@ async def lifespan(app: FastAPI):
         print(f"Error during startup: {e}")
     finally:
         db.close()
-    
+
     yield
+
 
 app = FastAPI(
     title="Shadow AI Discovery Engine API",
     description="Backend API for discovering and cataloging Shadow AI Agents in cloud infrastructure.",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # CORS configuration
@@ -63,5 +66,5 @@ def read_root():
     return {
         "status": "online",
         "service": "Shadow AI Discovery Engine API",
-        "docs": "/docs"
+        "docs": "/docs",
     }

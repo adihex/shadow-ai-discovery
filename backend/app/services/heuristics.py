@@ -1,7 +1,11 @@
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, TypedDict
+
+class IndicatorDict(TypedDict):
+    score: int
+    reason: str
 
 # Detection indicators and their confidence weights
-INDICATORS = {
+INDICATORS: Dict[str, IndicatorDict] = {
     # Environment variables indicative of AI/LLM models
     "OPENAI_API_KEY": {"score": 35, "reason": "OpenAI API Key configured"},
     "ANTHROPIC_API_KEY": {"score": 35, "reason": "Anthropic API Key configured"},
@@ -72,14 +76,18 @@ def analyze_asset(
     name_lower = name.lower()
     runtime_lower = (runtime or "").lower()
 
-    def add_indicator(keyword: str, fallback_reason: str, fallback_score: int = 15):
+    def add_indicator(keyword: str, fallback_reason: str, fallback_score: int = 15) -> None:
         nonlocal confidence_score
         # Skip if an equivalent reason was already recorded
         if any(keyword in r.lower() for r in confidence_reasons):
             return
-        indicator = INDICATORS.get(keyword, {})
-        confidence_score += indicator.get("score", fallback_score)
-        confidence_reasons.append(indicator.get("reason", fallback_reason))
+        indicator = INDICATORS.get(keyword)
+        if indicator is not None:
+            confidence_score += indicator["score"]
+            confidence_reasons.append(indicator["reason"])
+        else:
+            confidence_score += fallback_score
+            confidence_reasons.append(fallback_reason)
 
     # 1. Vertex AI Native Resources — scored first so the generic 'vertex'
     # keyword below dedups against this stronger signal, not the reverse.
