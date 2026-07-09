@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SHADOW_AI_GCP_PROJECT_ID=${SHADOW_AI_GCP_PROJECT_ID:-shadow-ai-agent-501704}
+      # If using Application Default Credentials locally, you could mount them here:
+      # - GOOGLE_APPLICATION_CREDENTIALS=/app/creds.json
+    volumes:
+      - backend_data:/app
+      # - ~/.config/gcloud/application_default_credentials.json:/app/creds.json:ro
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Tell the frontend to talk to the backend container mapped to localhost
+        VITE_API_BASE_URL: "http://localhost:8000/api"
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:

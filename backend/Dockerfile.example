@@ -1,0 +1,25 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+# Install uv for fast dependency resolution and installation
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies (system-wide inside the container)
+RUN uv sync --system --no-dev
+
+# Copy application code
+COPY app/ ./app/
+
+# We'll let the app create a new database.db on startup if using SQLite,
+# but ideally this should connect to Cloud SQL PostgreSQL in production.
+# Ensure the directory is writable.
+RUN chmod 777 /app
+
+EXPOSE 8000
+
+# Start FastAPI server
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

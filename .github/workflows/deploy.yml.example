@@ -1,0 +1,85 @@
+name: Build and Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: shadow-ai-agent-501704
+  REGION: us-central1
+  BACKEND_SERVICE_NAME: shadow-ai-backend
+  FRONTEND_SERVICE_NAME: shadow-ai-frontend
+  # Update this with your actual Artifact Registry repo:
+  GAR_LOCATION: us-central1-docker.pkg.dev/shadow-ai-agent-501704/shadow-ai-repo
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Authenticate to Google Cloud using Workload Identity Federation
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          # Replace with your actual Workload Identity Provider and Service Account
+          workload_identity_provider: 'projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider'
+          service_account: 'github-actions-sa@shadow-ai-agent-501704.iam.gserviceaccount.com'
+
+      # 2. Configure Docker to use the gcloud command-line tool as a credential helper
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: 'Docker auth'
+        run: |-
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      # 3. Build & Push Backend
+      - name: 'Build Backend Image'
+        run: |-
+          docker build -t "${{ env.GAR_LOCATION }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}" ./backend
+          docker push "${{ env.GAR_LOCATION }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}"
+
+      # 4. Deploy Backend to Cloud Run
+      - id: 'deploy-backend'
+        name: 'Deploy Backend'
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          service: '${{ env.BACKEND_SERVICE_NAME }}'
+          region: '${{ env.REGION }}'
+          image: '${{ env.GAR_LOCATION }}/${{ env.BACKEND_SERVICE_NAME }}:${{ github.sha }}'
+          flags: '--allow-unauthenticated' # Remove for private access
+          env_vars: |-
+            SHADOW_AI_GCP_PROJECT_ID=${{ env.PROJECT_ID }}
+            SHADOW_AI_GCP_REGIONS=${{ env.REGION }}
+
+      # 5. Build & Push Frontend (injecting the dynamically deployed backend URL)
+      - name: 'Build Frontend Image'
+        run: |-
+          docker build \
+            --build-arg VITE_API_BASE_URL="${{ steps.deploy-backend.outputs.url }}/api" \
+            -t "${{ env.GAR_LOCATION }}/${{ env.FRONTEND_SERVICE_NAME }}:${{ github.sha }}" \
+            ./frontend
+          docker push "${{ env.GAR_LOCATION }}/${{ env.FRONTEND_SERVICE_NAME }}:${{ github.sha }}"
+
+      # 6. Deploy Frontend to Cloud Run
+      - id: 'deploy-frontend'
+        name: 'Deploy Frontend'
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          service: '${{ env.FRONTEND_SERVICE_NAME }}'
+          region: '${{ env.REGION }}'
+          image: '${{ env.GAR_LOCATION }}/${{ env.FRONTEND_SERVICE_NAME }}:${{ github.sha }}'
+          flags: '--allow-unauthenticated'
+
+      - name: 'Show Deployment Output'
+        run: |
+          echo "Backend URL: ${{ steps.deploy-backend.outputs.url }}"
+          echo "Frontend URL: ${{ steps.deploy-frontend.outputs.url }}"

@@ -151,10 +151,12 @@ npm run test:e2e
 
 While the `./demo.sh` script is great for local testing, deploying the Shadow AI Discovery engine to a production GCP environment requires containerizing the application.
 
-1. **Dockerize the Services**: Create `Dockerfile`s for both the backend (FastAPI) and frontend (Vite/React).
-2. **Deploy to Cloud Run**: Push the container images to Artifact Registry and deploy them as two separate Cloud Run services.
-3. **Database**: Swap the local SQLite database for **Cloud SQL (PostgreSQL)** for persistent, transactional metadata storage.
-4. **Identity & Access Management (IAM)**: Assign a dedicated Service Account to the backend Cloud Run service with the `roles/viewer` or `roles/browser` roles at the GCP Folder or Organization level to scan across multiple projects securely.
+1. **Dockerize the Services**: We've provided templates in `backend/Dockerfile.example` and `frontend/Dockerfile.example`.
+2. **Local Orchestration**: You can test the containers locally using `docker-compose.example.yml`.
+3. **CI/CD Pipeline**: A template GitHub Actions workflow is provided in `.github/workflows/deploy.yml.example`.
+4. **Deploy to Cloud Run**: Push the container images to Artifact Registry and deploy them as two separate Cloud Run services.
+5. **Database**: Swap the local SQLite database for **Cloud SQL (PostgreSQL)** for persistent, transactional metadata storage.
+6. **Identity & Access Management (IAM)**: Assign a dedicated Service Account to the backend Cloud Run service with the `roles/viewer` or `roles/browser` roles at the GCP Folder or Organization level to scan across multiple projects securely.
 
 *For a comprehensive overview of how to scale this architecture for event-driven scanning (using Cloud Asset Inventory) and distributed workers, see [ARCHITECTURE.md](ARCHITECTURE.md).*
 
