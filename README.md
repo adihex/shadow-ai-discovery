@@ -2,6 +2,8 @@
 
 A lightweight governance platform designed to scan, inventory, and assess AI-enabled workloads (Shadow AI Agents) running inside Google Cloud Platform (GCP) projects.
 
+> 💡 **Deep Dive**: For full details on how this project was built, design decisions, trade-offs, and scaling patterns, please read [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ---
 
 ## ✨ Features
@@ -142,6 +144,19 @@ The suite covers the heuristics engine (confidence + risk scoring, env var redac
 cd frontend
 npm run test:e2e
 ```
+
+---
+
+## 🚢 Production Deployment
+
+While the `./demo.sh` script is great for local testing, deploying the Shadow AI Discovery engine to a production GCP environment requires containerizing the application.
+
+1. **Dockerize the Services**: Create `Dockerfile`s for both the backend (FastAPI) and frontend (Vite/React).
+2. **Deploy to Cloud Run**: Push the container images to Artifact Registry and deploy them as two separate Cloud Run services.
+3. **Database**: Swap the local SQLite database for **Cloud SQL (PostgreSQL)** for persistent, transactional metadata storage.
+4. **Identity & Access Management (IAM)**: Assign a dedicated Service Account to the backend Cloud Run service with the `roles/viewer` or `roles/browser` roles at the GCP Folder or Organization level to scan across multiple projects securely.
+
+*For a comprehensive overview of how to scale this architecture for event-driven scanning (using Cloud Asset Inventory) and distributed workers, see [ARCHITECTURE.md](ARCHITECTURE.md).*
 
 ---
 
