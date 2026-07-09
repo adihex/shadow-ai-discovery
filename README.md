@@ -29,7 +29,7 @@ Agent details (confidence breakdown, risk scoring, architecture flow): [docs/scr
 
 ## 🛠️ Tech Stack
 * **Backend**: Python, FastAPI, SQLModel (SQLAlchemy + Pydantic), SQLite.
-* **Frontend**: React, TypeScript, Vite, Vanilla CSS (custom glassmorphic theme).
+* **Frontend**: React, TypeScript, Vite, Vanilla CSS (custom glassmorphic theme), Playwright (E2E testing), Oxlint (Linting).
 * **API Specs**: Automatic Swagger docs (`http://localhost:8000/docs`).
 
 ---
@@ -49,15 +49,21 @@ shadow-ai-discovery/
 │   ├── requirements.txt
 │   └── database.db              # Local SQLite database (generated)
 ├── frontend/
+│   ├── e2e/                     # Playwright end-to-end tests
 │   ├── src/
 │   │   ├── services/api.ts      # REST API client
 │   │   ├── styles/index.css     # Design system & CSS properties
 │   │   ├── App.tsx              # Dashboard interface
 │   │   └── main.tsx
 │   ├── package.json
+│   ├── playwright.config.ts     # Playwright configuration
 │   └── vite.config.ts
 ├── ARCHITECTURE.md              # Engineering decisions & scaling docs
-└── README.md                    # Setup & user guide
+├── DESIGN.md                    # Design system specifics
+├── PRODUCT.md                   # Product vision & personas
+├── README.md                    # Setup & user guide
+├── demo.sh                      # Full-stack demo CLI (mock, live, infra)
+└── run_dev.sh                   # Simple dev server runner
 ```
 
 ---
@@ -68,7 +74,26 @@ shadow-ai-discovery/
 * Python 3.13+ (or let `uv` manage the installation automatically)
 * Node.js 18+
 
-### Step 1: Clone the Repository & Start the Backend
+### The Easiest Way: Using the Demo CLI
+
+We provide a `demo.sh` script to automate installing dependencies and starting both the frontend and backend in one command.
+
+```bash
+# Start the full stack with mock data (Zero GCP setup required)
+./demo.sh mock
+
+# Or, start the full stack against your live GCP environment
+./demo.sh live
+```
+
+Once running, open your browser to `http://localhost:5173`.
+To stop all processes, run `./demo.sh stop`.
+
+### Manual Setup (For Development)
+
+If you prefer to run the services individually:
+
+#### Start the Backend
 1. Open a terminal and navigate to the backend directory:
    ```bash
    cd backend
@@ -83,7 +108,7 @@ shadow-ai-discovery/
    ```
 The backend API is now running at `http://localhost:8000`. You can explore the interactive API docs at `http://localhost:8000/docs`.
 
-### Step 2: Start the Frontend Dashboard
+#### Start the Frontend Dashboard
 1. Open a separate terminal and navigate to the frontend directory:
    ```bash
    cd frontend
@@ -99,11 +124,24 @@ The backend API is now running at `http://localhost:8000`. You can explore the i
 The dashboard interface will be available at `http://localhost:5173`. Open it in your web browser.
 
 ### Running the Tests
+
+**Using the Demo CLI (Easiest)**
+```bash
+./demo.sh test
+```
+
+**Manual Backend Tests**
 ```bash
 cd backend
 uv run pytest
 ```
 The suite covers the heuristics engine (confidence + risk scoring, env var redaction) and the full scan lifecycle through the REST API against a throwaway database.
+
+**Manual Frontend E2E Tests**
+```bash
+cd frontend
+npm run test:e2e
+```
 
 ---
 
